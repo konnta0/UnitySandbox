@@ -63,5 +63,6 @@ crashlytics-build.properties
 Library
 Temp
 Logs
+obj
 
 .idea
