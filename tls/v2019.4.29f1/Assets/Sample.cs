@@ -19,7 +19,7 @@ public class Sample : MonoBehaviour
     private void OnGUI()
     {
         GUILayout.BeginVertical();
-        _scrollPos = GUILayout.BeginScrollView(_scrollPos, GUILayout.Width(Screen.width - 50), GUILayout.Height(Screen.height - 50));
+        _scrollPos = GUILayout.BeginScrollView(_scrollPos, GUILayout.Width(Screen.width - 10), GUILayout.Height(Screen.height - 10));
         GUILayout.Label($"ApiCompatibilityLevel: {GetApiCompatibilityLevelString()}");
         GUILayout.Label($"Unity version: {UnityEditorInternal.InternalEditorUtility.GetFullUnityVersion()}");
         requestUrl = GUILayout.TextField (requestUrl);
@@ -39,8 +39,8 @@ public class Sample : MonoBehaviour
             CopyToClipBoard();
         }
 
-        _scrollPos2 = GUILayout.BeginScrollView(_scrollPos2, GUILayout.Width(Screen.width - 50), GUILayout.Height(Screen.height / 2));
-        _textAreaString = GUILayout.TextArea(_textAreaString, GUILayout.Width(Screen.width - 100));
+        _scrollPos2 = GUILayout.BeginScrollView(_scrollPos2, GUILayout.Width(Screen.width - 50), GUILayout.Height(Screen.height * 0.8f));
+        _textAreaString = GUILayout.TextArea(_textAreaString, GUILayout.Width(Screen.width - 60), GUILayout.Height(Screen.height * 0.6f));
         GUILayout.EndScrollView();
 
         if (GUILayout.Button("Clear log"))
@@ -50,9 +50,6 @@ public class Sample : MonoBehaviour
         
         GUILayout.EndScrollView();
         GUILayout.EndVertical();
-        
-        
-
     }
 
     private IEnumerator DoUnityWebRequest()
@@ -82,10 +79,12 @@ public class Sample : MonoBehaviour
             }
 
             AddMessage($"status code:{request.responseCode}");
+            var responseHeaderString = string.Empty;
             foreach (var kv in request.GetResponseHeaders())
             {
-                AddMessage($"response header name:{kv.Key}, value:{kv.Value}");
+                responseHeaderString += $"\n name:{kv.Key}, value:{kv.Value}";
             }
+            AddMessage($"response header {responseHeaderString}");
             AddMessage($"response: {request.downloadHandler.text}");
             request.downloadHandler?.Dispose();
         }
@@ -98,7 +97,11 @@ public class Sample : MonoBehaviour
 
     private void CopyToClipBoard()
     {
-        
+        var message = string.Empty;
+        message += $"ApiCompatibilityLevel: {GetApiCompatibilityLevelString()}\n";
+        message += $"Unity version: {UnityEditorInternal.InternalEditorUtility.GetFullUnityVersion()}\n";
+        message += "===================================== \n";
+        GUIUtility.systemCopyBuffer = message + _textAreaString;
     }
 
     private void AddMessage(string message)
