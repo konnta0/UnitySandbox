@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.Networking;
 using UnityEngine.Serialization;
 
 public class Sample : MonoBehaviour
@@ -20,11 +21,12 @@ public class Sample : MonoBehaviour
         GUILayout.BeginVertical();
         _scrollPos = GUILayout.BeginScrollView(_scrollPos, GUILayout.Width(Screen.width - 50), GUILayout.Height(Screen.height - 50));
         GUILayout.Label($"ApiCompatibilityLevel: {GetApiCompatibilityLevelString()}");
+        GUILayout.Label($"Unity version: {UnityEditorInternal.InternalEditorUtility.GetFullUnityVersion()}");
         requestUrl = GUILayout.TextField (requestUrl);
 
         if (GUILayout.Button("Send UnityWebRequest"))
         {
-            DoUnityWebRequest();
+            StartCoroutine(DoUnityWebRequest());
         }
 
         if (GUILayout.Button("Send Request from HttpClient"))
@@ -36,9 +38,15 @@ public class Sample : MonoBehaviour
         {
             CopyToClipBoard();
         }
+
         _scrollPos2 = GUILayout.BeginScrollView(_scrollPos2, GUILayout.Width(Screen.width - 50), GUILayout.Height(Screen.height / 2));
-        _textAreaString = GUILayout.TextArea(_textAreaString, GUILayout.Width(Screen.width - 50));
+        _textAreaString = GUILayout.TextArea(_textAreaString, GUILayout.Width(Screen.width - 100));
         GUILayout.EndScrollView();
+
+        if (GUILayout.Button("Clear log"))
+        {
+            _textAreaString = string.Empty;
+        }
         
         GUILayout.EndScrollView();
         GUILayout.EndVertical();
@@ -47,9 +55,40 @@ public class Sample : MonoBehaviour
 
     }
 
-    private string DoUnityWebRequest()
+    private IEnumerator DoUnityWebRequest()
     {
-        return string.Empty;
+        using (var request = UnityWebRequest.Get(requestUrl))
+        {
+            request.SetRequestHeader("Content-Type", "application/json");
+            
+            AddMessage($"request start {requestUrl}");
+            yield return request.SendWebRequest();
+
+            if (request.isHttpError)
+            {
+                AddMessage($"is http error");
+            }
+            else if (request.isNetworkError)
+            {
+                AddMessage("is network error");
+            }
+            else if (!string.IsNullOrEmpty(request.error))
+            {
+                AddMessage($"request.error: {request.error}");
+            }
+            else
+            {
+                AddMessage("success");
+            }
+
+            AddMessage($"status code:{request.responseCode}");
+            foreach (var kv in request.GetResponseHeaders())
+            {
+                AddMessage($"response header name:{kv.Key}, value:{kv.Value}");
+            }
+            AddMessage($"response: {request.downloadHandler.text}");
+            request.downloadHandler?.Dispose();
+        }
     }
 
     private string DoRequestFromHttpClient()
@@ -60,6 +99,11 @@ public class Sample : MonoBehaviour
     private void CopyToClipBoard()
     {
         
+    }
+
+    private void AddMessage(string message)
+    {
+        _textAreaString += $"[{DateTime.Now:O}] {message}\n";
     }
 
     private string GetApiCompatibilityLevelString()
