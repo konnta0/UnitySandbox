@@ -1,18 +1,20 @@
 ﻿using System;
 using System.Collections;
-using System.Collections.Generic;
+using System.Linq;
+using System.Net;
+using System.Net.Http;
+using System.Threading.Tasks;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Networking;
-using UnityEngine.Serialization;
 
 public class Sample : MonoBehaviour
 { 
     [SerializeField]
     private string requestUrl = "https://hogehoge.com";
 
-    private Vector2 _scrollPos;
-    private Vector2 _scrollPos2;
+    private Vector2 _scrollPos = Vector2.zero;
+    private Vector2 _scrollPos2 = Vector2.zero;
 
     private string _textAreaString = "";
 
@@ -31,7 +33,7 @@ public class Sample : MonoBehaviour
 
         if (GUILayout.Button("Send Request from HttpClient"))
         {
-            DoRequestFromHttpClient();
+            DoRequestByHttpClient();
         }
         
         if (GUILayout.Button("Copy to ClipBoard"))
@@ -40,7 +42,7 @@ public class Sample : MonoBehaviour
         }
 
         _scrollPos2 = GUILayout.BeginScrollView(_scrollPos2, GUILayout.Width(Screen.width - 50), GUILayout.Height(Screen.height * 0.8f));
-        _textAreaString = GUILayout.TextArea(_textAreaString, GUILayout.Width(Screen.width - 60), GUILayout.Height(Screen.height * 0.6f));
+        _textAreaString = GUILayout.TextArea(_textAreaString, GUILayout.Width(Screen.width - 60));
         GUILayout.EndScrollView();
 
         if (GUILayout.Button("Clear log"))
@@ -58,7 +60,7 @@ public class Sample : MonoBehaviour
         {
             request.SetRequestHeader("Content-Type", "application/json");
             
-            AddMessage($"request start {requestUrl}");
+            AddMessage($"[UnityWebRequest] request start {requestUrl}");
             yield return request.SendWebRequest();
 
             if (request.isHttpError)
@@ -90,9 +92,49 @@ public class Sample : MonoBehaviour
         }
     }
 
-    private string DoRequestFromHttpClient()
+    private void DoRequestByHttpClient()
     {
-        return string.Empty;
+        using (var client = new HttpClient())
+        {
+            ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
+            client.DefaultRequestHeaders.TryAddWithoutValidation("Content-Type", "application/json");
+            AddMessage($"[HttpClient] request start {requestUrl}");
+
+            HttpResponseMessage response;
+            try
+            {
+                var task = client.GetAsync(requestUrl);
+                Task.WaitAll(task);
+                response = task.Result;
+            }
+            catch (AggregateException e)
+            {
+                AddMessage($"request.error: {e.InnerException?.Message}");
+                return;   
+            }
+            catch (Exception e)
+            {
+                AddMessage($"request.error: {e.Message}");
+                return;
+            }
+            
+            AddMessage("success");
+            AddMessage($"status code:{response?.StatusCode}");
+
+            var responseHeaderString = string.Empty;
+            if (response?.Headers != null)
+            {
+                foreach (var kv in response.Headers)
+                {
+                    responseHeaderString += $"\n name:{kv.Key}, value:{string.Join(",", kv.Value.ToArray())}";
+                }
+            }
+            AddMessage($"response header {responseHeaderString}");
+            var responseContent = Task.Run(() => response?.Content.ReadAsStringAsync()).Result;
+            AddMessage($"response: {responseContent}");
+
+            response?.Dispose();
+        }
     }
 
     private void CopyToClipBoard()
@@ -103,12 +145,7 @@ public class Sample : MonoBehaviour
         message += "===================================== \n";
         GUIUtility.systemCopyBuffer = message + _textAreaString;
     }
-
-    private void AddMessage(string message)
-    {
-        _textAreaString += $"[{DateTime.Now:O}] {message}\n";
-    }
-
+    
     private string GetApiCompatibilityLevelString()
     {
         var buildTargetGroup = BuildTargetGroup.Unknown;
@@ -120,5 +157,10 @@ public class Sample : MonoBehaviour
         buildTargetGroup = BuildTargetGroup.Standalone;
 #endif
         return PlayerSettings.GetApiCompatibilityLevel(buildTargetGroup).ToString();
+    }
+    
+    private void AddMessage(string message)
+    {
+        _textAreaString += $"[{DateTime.Now:O}] {message}\n";
     }
 }
