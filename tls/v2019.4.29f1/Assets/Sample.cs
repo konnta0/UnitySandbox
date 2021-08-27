@@ -22,8 +22,10 @@ public class Sample : MonoBehaviour
     {
         GUILayout.BeginVertical();
         _scrollPos = GUILayout.BeginScrollView(_scrollPos, GUILayout.Width(Screen.width - 10), GUILayout.Height(Screen.height - 10));
+#if UNITY_EDITOR
         GUILayout.Label($"ApiCompatibilityLevel: {GetApiCompatibilityLevelString()}");
         GUILayout.Label($"Unity version: {UnityEditorInternal.InternalEditorUtility.GetFullUnityVersion()}");
+#endif
         requestUrl = GUILayout.TextField (requestUrl);
 
         if (GUILayout.Button("Send UnityWebRequest"))
@@ -140,12 +142,15 @@ public class Sample : MonoBehaviour
     private void CopyToClipBoard()
     {
         var message = string.Empty;
+#if UNITY_EDITOR
         message += $"ApiCompatibilityLevel: {GetApiCompatibilityLevelString()}\n";
         message += $"Unity version: {UnityEditorInternal.InternalEditorUtility.GetFullUnityVersion()}\n";
+#endif
         message += "===================================== \n";
         GUIUtility.systemCopyBuffer = message + _textAreaString;
     }
-    
+
+#if UNITY_EDITOR
     private string GetApiCompatibilityLevelString()
     {
         var buildTargetGroup = BuildTargetGroup.Unknown;
@@ -158,6 +163,7 @@ public class Sample : MonoBehaviour
 #endif
         return PlayerSettings.GetApiCompatibilityLevel(buildTargetGroup).ToString();
     }
+#endif
     
     private void AddMessage(string message)
     {
